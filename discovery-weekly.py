@@ -1,7 +1,4 @@
 import sys
-import json
-
-import spotipy.util as util
 from spotipy import Spotify
 
 
@@ -29,8 +26,7 @@ class SwaRunner:
         album_playlist = runner.prepare_weekly_album_playlist()
         album_ids = runner.get_weekly_albums_ids()
         tracks = runner.get_all_albums_tracks(album_ids)
-        results = runner.add_tracks_to_playlist(album_playlist['id'], tracks)
-        print(results)
+        runner.add_tracks_to_playlist(album_playlist['id'], tracks)
 
     def get_user_playlists(self) -> dict:
         if 'user_pl' not in self._cache or self._cache['user_pl'] is None:
