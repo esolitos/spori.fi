@@ -1,38 +1,38 @@
 import sys
-from spotipy import Spotify
+from spotipy import Spotify, SpotifyOAuth
 
 
 class SwaRunner:
     _cache: dict = {}
-    user: str
+    user: dict = None
+    user_id: str
     spy_client: Spotify
     special_playlist: dict = {
         'name': 'Discover Weekly Albums',
         'desc': 'Contains the "Discovery Weekly", but with albums',
     }
 
-    def __init__(self, client: Spotify, user: str):
+    def __init__(self, client: Spotify):
         self.spy_client = client
-        self.user = user
+        self.user_id = self._get_username()
 
-    @staticmethod
-    def main(user: str):
-        token = SwaRunner.get_oauth_token(user)
-        if not token:
-            raise RuntimeError('Unable to get oauth token.')
+    def run(self):
+        album_playlist = self.prepare_weekly_album_playlist()
+        album_ids = self.get_weekly_albums_ids()
+        tracks = self.get_all_albums_tracks(album_ids)
+        self.add_tracks_to_playlist(album_playlist['id'], tracks)
 
-        client = Spotify(auth=token)
-        runner = SwaRunner(client, user)
-        album_playlist = runner.prepare_weekly_album_playlist()
-        album_ids = runner.get_weekly_albums_ids()
-        tracks = runner.get_all_albums_tracks(album_ids)
-        runner.add_tracks_to_playlist(album_playlist['id'], tracks)
+    def _get_username(self):
+        if self.user is None:
+            self.user = self.spy_client.current_user()
+        return self.user['id']
 
     def get_user_playlists(self) -> dict:
-        if 'user_pl' not in self._cache or self._cache['user_pl'] is None:
-            self._cache['user_pl'] = self.spy_client.user_playlists(self.user)['items']
+        key: str = 'user_playlists'
+        if key not in self._cache or self._cache[key] is None:
+            self._cache[key] = self.spy_client.current_user_playlists()['items']
 
-        return self._cache['user_pl']
+        return self._cache[key]
 
     def get_playlist_by_name(self, name: str) -> dict or None:
         for playlist in self.get_user_playlists():
@@ -53,7 +53,7 @@ class SwaRunner:
         if not album_playlist:
             print('Creating new playlist.')
             return self.spy_client.user_playlist_create(
-                self.user,
+                self.user_id,
                 name=self.special_playlist['name'],
                 description=self.special_playlist['desc'],
                 public=False
@@ -62,26 +62,30 @@ class SwaRunner:
         print('Found existing playlist:', end=' ')
         if album_playlist['tracks']['total'] > 0:
             print("contains %s tracks to remove." % album_playlist['tracks']['total'])
-            self.do_playlist_cleanup(album_playlist['id'])
+            self._playlist_cleanup(album_playlist['id'])
         else:
             print("and is empty.")
 
         return album_playlist
 
-    def do_playlist_cleanup(self, playlist_id: str):
+    def _playlist_cleanup(self, playlist_id: str):
+        print('Cleaning up', end=' ')
+        while self._do_playlist_cleanup(playlist_id):
+            print('.', end='')
+        print('!')
+
+    def _do_playlist_cleanup(self, playlist_id: str):
         playlist_tracks = self.spy_client.playlist_tracks(playlist_id=playlist_id, fields='items(track(id))')
-        print(playlist_tracks)
 
         if not playlist_tracks or len(playlist_tracks['items']) <= 0:
             return None
 
         tracks = [t['track']['id'] for t in playlist_tracks['items']]
-        for tracks_chunk in list(SwaRunner.divide_chunks(tracks, 100)):
-            self.spy_client.user_playlist_remove_all_occurrences_of_tracks(
-                user=self.user,
-                playlist_id=playlist_id,
-                tracks=tracks_chunk
-            )
+        return self.spy_client.user_playlist_remove_all_occurrences_of_tracks(
+            user=self.user_id,
+            playlist_id=playlist_id,
+            tracks=tracks
+        )
 
     def get_weekly_albums_ids(self):
         playlist = self.get_discover_weekly()
@@ -99,7 +103,7 @@ class SwaRunner:
 
     def add_tracks_to_playlist(self, playlist_id: str, tracks: list):
         for chunk in list(SwaRunner.divide_chunks(tracks, 100)):
-            self.spy_client.user_playlist_add_tracks(user=self.user, playlist_id=playlist_id, tracks=chunk)
+            self.spy_client.user_playlist_add_tracks(user=self.user_id, playlist_id=playlist_id, tracks=chunk)
 
     @staticmethod
     def divide_chunks(items: list, size: int):
@@ -107,14 +111,23 @@ class SwaRunner:
             yield items[i:i + size]
 
     @staticmethod
-    def get_oauth_token(username: str, scope: str = 'playlist-read-private playlist-modify-private'):
+    def get_oauth_token(username: str, scope: str = 'user-read-email playlist-read-private playlist-modify-private'):
         from spotipy.util import prompt_for_user_token
         return prompt_for_user_token(username, scope)
 
 
+def main(user: str):
+    token = SwaRunner.get_oauth_token(user)
+    if not token:
+        raise RuntimeError('Unable to get oauth token.')
+
+    client = Spotify(auth=token)
+    SwaRunner(client).run()
+
+
 if __name__ == '__main__':
     if len(sys.argv) > 1:
-        SwaRunner.main(sys.argv[1])
+        main(sys.argv[1])
     else:
         print("Usage: %s username" % (sys.argv[0],))
         sys.exit(1)
