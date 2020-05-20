@@ -9,17 +9,20 @@ oauth_grants = "playlist-read-private playlist-modify-public playlist-modify-pri
 def _sp_oauth() -> SpotifyOAuth:
     client_id = getenv("SPOTIPY_CLIENT_ID")
     client_secret = getenv("SPOTIPY_CLIENT_SECRET")
-
-    server_host = getenv("SERVER_HOST")
-    server_port = getenv("SERVER_PORT")
+    oauth_cache_file = getenv("OAUTH_CACHE_FILE", '.cache-spotify-oauth')
+    redirect_url = 'http://' + getenv('REDIRECT_HOST', "%s:%s" % _server_address()) + '/success'
 
     return SpotifyOAuth(
         client_id,
         client_secret,
-        cache_path='.cache-spotify-oauth',
-        redirect_uri="http://%s:%s/success" % (server_host, server_port),
+        cache_path=oauth_cache_file,
+        redirect_uri=redirect_url,
         scope=oauth_grants,
     )
+
+
+def _server_address() -> tuple:
+    return getenv("SERVER_HOST", '127.0.1.1'), getenv("SERVER_PORT", '8080')
 
 
 def _get_access_token() -> str or None:
@@ -86,9 +89,7 @@ def _run():
 
 
 def main():
-    server_host = getenv("SERVER_HOST")
-    server_port = getenv("SERVER_PORT")
-
+    server_host, server_port = _server_address()
     run(host=server_host, port=server_port)
 
 
