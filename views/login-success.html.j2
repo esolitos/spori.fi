@@ -1,0 +1,11 @@
+{% extends 'index.html.j2' %}
+{% block main %}
+<h1>Yeah!</h1>
+<p>
+  Welcome <em>{{ username }}</em> you are successfully logged in with your Spotify and finally ready to rock'n'roll!<br>
+  Click the <em>magic</em> button to start the process.
+</p>
+<p>
+  <a role="button" class="btn btn-primary" href="/run">Do some magic!</a>
+</p>
+{% endblock %}

@@ -8,6 +8,8 @@ verify_ssl = true
 [packages]
 spotipy = "*"
 bottle = "*"
+jinja2 = "*"
+redis = "*"
 
 [requires]
 python_version = "3.7"
