@@ -7,9 +7,9 @@ cookie_secret = str(getenv("SPOTIPY_CLIENT_SECRET"))
 
 
 def redis_client() -> redis.Redis:
-    c = redis.Redis(
-        password='yetsle97',
-        decode_responses=True
+    c = redis.Redis().from_url(
+        url=getenv('REDISCLOUD_URL'),
+        decode_responses=True,
     )
     # Test connection
     c.ping()
