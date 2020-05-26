@@ -117,9 +117,10 @@ def static_assets(filename: str):
 
 def main():
     server_host, server_port = http_server_info()
+    debug = is_debug()
     bottle.run(
         host=server_host, port=server_port,
-        debug=True, reloader=True
+        debug=debug, reloader=debug
     )
 
 

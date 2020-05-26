@@ -24,6 +24,9 @@ def http_server_info() -> tuple:
     return getenv("LISTEN_IP", '127.0.1.1'), getenv("PORT", '8080')
 
 
+def is_debug() -> bool:
+    return bool(getenv('DEBUG', False))
+
 # def cookie_get_username() -> str or None:
 #     cookie = bottle.request.get_cookie('swa_data', secret=cookie_secret)
 #     if cookie and 'user' in cookie:
