@@ -4,7 +4,7 @@ from os import getenv
 import redis
 import spotipy
 
-from swa.utils import http_server_info, redis_client
+from swa.utils import debug_log, http_server_info, redis_client
 
 oauth_grants = "playlist-read-private playlist-modify-public playlist-modify-private"
 
@@ -104,7 +104,9 @@ def spotify_oauth(username: str) -> SpotifyOauthRedis:
 
 def access_token(email: str) -> str or None:
     tokens = spotify_oauth(email).get_cached_token()
-    if not tokens or 'access_token' not in tokens:
+    debug_log('Cached tokens:')
+    debug_log(tokens)
+    if (not tokens) or ('access_token' not in tokens):
         return None
 
     return tokens['access_token']

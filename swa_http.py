@@ -16,6 +16,11 @@ def index():
 @bottle.jinja2_view('login.html.j2')
 def login():
     session_data = session_get_data(session_get_id(auto_start=True))
+
+    # Try to get the token from cache.
+    if session_data.email and access_token(email=session_data.email):
+        bottle.redirect('/login/success')
+
     return {
         'email':       session_data.email or '',
         'message_key': bottle.request.params.get('message') or False,
