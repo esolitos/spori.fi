@@ -24,12 +24,25 @@ def http_server_info() -> tuple:
     return getenv("LISTEN_IP", '127.0.1.1'), getenv("PORT", '8080')
 
 
-def is_debug() -> bool:
+def is_debug_mode() -> bool:
     return bool(getenv('DEBUG', False))
 
-# def cookie_get_username() -> str or None:
-#     cookie = bottle.request.get_cookie('swa_data', secret=cookie_secret)
-#     if cookie and 'user' in cookie:
-#         return cookie['user']
-#
-#     return None
+
+def is_prod() -> bool:
+    return getenv('APP_ENV', 'Dev') == 'Prod'
+
+
+def debug_log(message, **kwargs):
+    """
+    If debug mode is enable will print the passed message/object.
+
+    :param message: Any string, object or primitive.
+    """
+    if not is_debug_mode():
+        return
+
+    if type(message) == str:
+        print(message, **kwargs)
+    else:
+        from pprint import pprint
+        pprint(message, **kwargs)

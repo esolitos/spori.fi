@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 
 import bottle
 
-from swa.utils import redis_client, redis_session_data_key
+from swa.utils import debug_log, redis_client, redis_session_data_key
 
 cookie_secret = 'TODO'
 
@@ -73,9 +73,10 @@ def session_get_data(session_id=None) -> SessionData:
         raise RuntimeError('No valid session and no session_id provided!')
 
     redis_data = redis_client().get(redis_session_data_key(session_id))
+    debug_log("Get session data: ", end=" ")
+    debug_log({session_id: redis_data})
     if redis_data:
         return SessionData.from_json(redis_data)
-        # return dict(json.loads(redis_data))
 
     return SessionData()
 
@@ -89,6 +90,8 @@ def session_set_data(data: SessionData, session_id: str = None) -> bool:
 
     redis_key = redis_session_data_key(session_id)
     redis_data = data.to_json()
+    debug_log("Set session data: ", end=" ")
+    debug_log({session_id: redis_data})
     if not redis_client().set(name=redis_key, value=redis_data):
         return False
 

@@ -2,18 +2,19 @@ import sys
 
 from spotipy import Spotify
 
+from swa.utils import debug_log
+
 
 class SwaRunner:
-    _cache: dict = {}
-    _user: dict = None
-    _spy_client: Spotify
     _special_playlist: dict = {
         'name': 'Discover Weekly Albums',
         'desc': 'Contains the "Discovery Weekly", but with albums',
     }
 
     def __init__(self, client: Spotify):
-        self._spy_client = client
+        self._cache: dict = {}
+        self._user: dict or None = None
+        self._spy_client: Spotify = client
 
     def run(self):
         album_playlist = self.prepare_weekly_album_playlist()
@@ -24,6 +25,8 @@ class SwaRunner:
     def get_user(self):
         if self._user is None:
             self._user = self._spy_client.current_user()
+            debug_log('Fetch user data:')
+            debug_log(self._user)
         return self._user
 
     def get_username(self):
@@ -39,8 +42,11 @@ class SwaRunner:
     def get_playlist_by_name(self, name: str) -> dict or None:
         for playlist in self.get_user_playlists():
             if playlist['name'] == name:
+                debug_log("Playlist '{}': Found.".format(name))
+                debug_log(playlist)
                 return playlist
 
+        debug_log("Playlist '{}': Not found.".format(name))
         return None
 
     def get_discover_weekly(self) -> dict:
@@ -53,7 +59,7 @@ class SwaRunner:
     def prepare_weekly_album_playlist(self) -> dict:
         album_playlist = self.get_playlist_by_name(self._special_playlist['name'])
         if not album_playlist:
-            print('Creating new playlist.')
+            debug_log("Creating playlist: '{}'".format(self._special_playlist['name']))
             return self._spy_client.user_playlist_create(
                 self.get_username(),
                 name=self._special_playlist['name'],
@@ -61,20 +67,18 @@ class SwaRunner:
                 public=False
             )
 
-        print('Found existing playlist:', end=' ')
+        debug_log("Found playlist '%s:'".format(self._special_playlist['name']))
         if album_playlist['tracks']['total'] > 0:
-            print("contains %s tracks to remove." % album_playlist['tracks']['total'])
+            debug_log("Contains %s tracks to remove.".format(album_playlist['tracks']['total']))
             self._playlist_cleanup(album_playlist['id'])
-        else:
-            print("and is empty.")
 
         return album_playlist
 
     def _playlist_cleanup(self, playlist_id: str):
-        print('Cleaning up', end=' ')
+        debug_log('Cleaning up:', end=' ')
         while self._do_playlist_cleanup(playlist_id):
-            print('.', end='')
-        print('!')
+            debug_log('.', end='')
+        debug_log('!')
 
     def _do_playlist_cleanup(self, playlist_id: str):
         playlist_tracks = self._spy_client.playlist_tracks(playlist_id=playlist_id, fields='items(track(id))')
@@ -92,6 +96,7 @@ class SwaRunner:
     def get_weekly_albums_ids(self):
         playlist = self.get_discover_weekly()
         if not playlist:
+            print("Could not find 'Discover weekly' playlist!")
             return []
         tracks = self._spy_client.playlist_tracks(playlist_id=playlist['id'], fields='items(track(id,album(id)))')
         return [t['track']['album']['id'] for t in tracks['items']]

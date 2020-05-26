@@ -27,6 +27,7 @@ def do_login():
     session_id = session_get_id(auto_start=True)
     email = str(bottle.request.forms.get('email'))
     session_data = session_get_data(session_id).add('email', email)
+    debug_log(session_data)
     session_set_data(session_data)
 
     bottle.redirect(spotify_oauth(email).get_authorize_url())
@@ -117,10 +118,11 @@ def static_assets(filename: str):
 
 def main():
     server_host, server_port = http_server_info()
-    debug = is_debug()
+    enable_debug = is_debug_mode()
+    is_prod_mode = is_prod()
     bottle.run(
         host=server_host, port=server_port,
-        debug=debug, reloader=debug
+        debug=enable_debug, reloader=(not is_prod_mode)
     )
 
 
