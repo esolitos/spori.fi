@@ -21,7 +21,7 @@ def redis_session_data_key(sid: str) -> str:
 
 
 def http_server_info() -> tuple:
-    return getenv("SERVER_HOST", '127.0.1.1'), getenv("SERVER_PORT", '8080')
+    return getenv("LISTEN_IP", '127.0.1.1'), getenv("PORT", '8080')
 
 
 # def cookie_get_username() -> str or None:
