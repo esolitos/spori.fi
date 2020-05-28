@@ -1,0 +1,66 @@
+{% extends 'base.html.j2' %}
+
+{% block main %}
+<form class="form-signin" method="post">
+  <h1>A disturbance in the force!</h1>
+  <p><em>Oh no!</em> It appears that our <strong>powerful magic</strong> did not work all automatically!</p>
+  <p>
+    <strong>Don't Panic!</strong> It is all good: we simply could not identify the correct <em>&quot;Discover Weekly&quot;</em>
+    playlist so you need to manually select it.
+  </p>
+  <div class="form-group">
+    <select name="playlist_id" class="form-control" id="select-playlist">
+      <option selected disabled>- Select one -</option>
+      {% for owner, user_playlists in playlists.items() %}
+      <optgroup label="{{ owner }}">
+        {% for p in user_playlists %}<option value="{{ p['id'] }}">{{ p.name }}</option>{% endfor %}
+      </optgroup>
+      {% endfor %}
+      <optgroup label="Others">
+        <option value="_">- None of the above-</option>
+      </optgroup>
+    </select>
+    <small class="form-text text-muted">
+      If you cannot find your &quot;Discover Weekly&quot; in the selection below, you should select &quot;<strong>- None of the above -</strong>&quot;
+      and follow the instructions that will appear.
+    </small>
+  </div>
+  <div id="playlist-preview-wrapper" class="d-none alert alert-primary" role="alert">
+    <p>To ensure you selected the correct playlist here's a preview of what you selected!</p>
+    <iframe id="playlist-preview" src="" width="350" height="380" frameborder="0" allowtransparency="true" allow="encrypted-media"></iframe>
+  </div>
+  <fieldset id="playlist-id-manual-input" class="form-group d-none">
+      <legend>Manual input</legend>
+      <p>If the desired playlist is not in the selection above you must provide the Spotify URI yourself.</p>
+      <details>
+        <summary>Instructions <span class="invisible-on-open">(click to expand)</span></summary>
+        <section>
+          <p>Retrieving a playlist URL/URI is rather easy:</p>
+          <ul class="list-group">
+            <li class="list-group-item">right click on a playlist,</li>
+            <li class="list-group-item">select <strong>Share</strong></li>
+            <li class="list-group-item">and finally click on <strong>Copy Spotify URI</strong></li>
+          </ul>
+          <p>From your smartphone instead:</p>
+          <ul class="list-group">
+            <li class="list-group-item">open a playlist,</li>
+            <li class="list-group-item">tap on the three dots "<strong style="vertical-align: text-bottom;">...</strong>" below the title,</li>
+            <li class="list-group-item">select <strong>Share</strong>,</li>
+            <li class="list-group-item">and finally tap on <strong>Copy Link</strong>.</li>
+          </ul>
+          <p class="text-muted">
+            If you need more info how to get the Playlist ID, with detailed text and screenshots please refer to
+            <a href="https://support.spotify.com/us/using_spotify/features/sharing-music/" rel="nofollow" target="_blank">this support article</a>.
+          </p>
+        </section>
+      </details>
+      <div class="form-group">
+        <input type="text" class="form-control" name="playlist_id_text" id="input-playlist-id" placeholder="Playlist Link or URI">
+        <small class="form-text text-muted">Read the instructions above to get help.</small>
+      </div>
+  </fieldset>
+  <button id="playlist-submit" disabled class="btn btn-lg btn-primary btn-block" type="submit">Select a playlist.</button>
+</form>
+
+<script src="/assets/js/run-manual-selection.js"></script>
+{% endblock %}

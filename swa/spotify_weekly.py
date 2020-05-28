@@ -1,8 +1,31 @@
-import sys
+import logging
 
 from spotipy import Spotify
 
-from swa.utils import debug_log
+
+class SwaError(RuntimeError):
+    """Generic App error."""
+    pass
+
+
+class PlaylistError(SwaError):
+    """Playlist generic error."""
+    pass
+
+
+class DiscoverWeeklyError(PlaylistError):
+    """Generic error about 'Discover Weekly' playlist."""
+    pass
+
+
+class DiscoverWeeklyNotFoundError(DiscoverWeeklyError):
+    """Playlist 'Discover Weekly' not found."""
+    pass
+
+
+class DiscoverWeeklyMultipleMatchesError(DiscoverWeeklyError):
+    """Playlist 'Discover Weekly' has multiple matches."""
+    pass
 
 
 class SwaRunner:
@@ -11,10 +34,11 @@ class SwaRunner:
         'desc': 'Contains the "Discovery Weekly", but with albums',
     }
 
-    def __init__(self, client: Spotify):
+    def __init__(self, client: Spotify, discover_weekly_id: str = None):
         self._cache: dict = {}
         self._user: dict or None = None
         self._spy_client: Spotify = client
+        self._discover_weekly_id = discover_weekly_id if discover_weekly_id else None
 
     def run(self):
         album_playlist = self.prepare_weekly_album_playlist()
@@ -25,41 +49,58 @@ class SwaRunner:
     def get_user(self):
         if self._user is None:
             self._user = self._spy_client.current_user()
-            debug_log('Fetch user data:')
-            debug_log(self._user)
+            logging.debug('Fetched user data:')
+            logging.debug(self._user)
         return self._user
 
     def get_username(self):
         return self.get_user()['id']
 
-    def get_user_playlists(self) -> dict:
+    def get_user_playlists(self, sort_by_author: bool = False) -> dict:
         key: str = 'user_playlists'
         if key not in self._cache or self._cache[key] is None:
             self._cache[key] = self._spy_client.current_user_playlists()['items']
 
+        if sort_by_author:
+            return self._sort_playlists_by_author(self._cache[key])
+
         return self._cache[key]
 
-    def get_playlist_by_name(self, name: str) -> dict or None:
+    def get_playlist_by_name(self, name: str, multiple: bool = False) -> list:
+        matches = []
         for playlist in self.get_user_playlists():
             if playlist['name'] == name:
-                debug_log("Playlist '{}': Found.".format(name))
-                debug_log(playlist)
-                return playlist
+                logging.debug("Playlist '{}': Found.".format(name))
+                matches.append(playlist)
 
-        debug_log("Playlist '{}': Not found.".format(name))
-        return None
+        if len(matches):
+            return matches if multiple else matches[0]
 
-    def get_discover_weekly(self) -> dict:
+        logging.debug("Playlist '{}': Not found.".format(name))
+        return matches
+
+    def get_discover_weekly(self, allow_multiple: bool = False) -> list or dict:
+        if self._discover_weekly_id:
+            p = self._spy_client.playlist(self._discover_weekly_id)
+            print('Got pre-selection: {}'.format(self._discover_weekly_id))
+            print(p)
+            return p
+
         playlist_name: str = 'Discover Weekly'
         if playlist_name not in self._cache or self._cache[playlist_name] is None:
-            self._cache[playlist_name] = self.get_playlist_by_name(playlist_name)
+            self._cache[playlist_name] = self.get_playlist_by_name(playlist_name, multiple=True)
 
-        return self._cache[playlist_name]
+        if len(self._cache[playlist_name]) <= 0:
+            raise DiscoverWeeklyNotFoundError()
+        elif len(self._cache[playlist_name]) > 1 and not allow_multiple:
+            raise DiscoverWeeklyMultipleMatchesError()
+
+        return self._cache[playlist_name] if allow_multiple else self._cache[playlist_name][0]
 
     def prepare_weekly_album_playlist(self) -> dict:
         album_playlist = self.get_playlist_by_name(self._special_playlist['name'])
         if not album_playlist:
-            debug_log("Creating playlist: '{}'".format(self._special_playlist['name']))
+            logging.debug("Creating playlist: '{}'".format(self._special_playlist['name']))
             return self._spy_client.user_playlist_create(
                 self.get_username(),
                 name=self._special_playlist['name'],
@@ -67,18 +108,18 @@ class SwaRunner:
                 public=False
             )
 
-        debug_log("Found playlist '%s:'".format(self._special_playlist['name']))
+        logging.info("Found playlist '%s:'".format(self._special_playlist['name']))
         if album_playlist['tracks']['total'] > 0:
-            debug_log("Contains %s tracks to remove.".format(album_playlist['tracks']['total']))
+            logging.info("Contains %s tracks to remove.".format(album_playlist['tracks']['total']))
             self._playlist_cleanup(album_playlist['id'])
 
         return album_playlist
 
     def _playlist_cleanup(self, playlist_id: str):
-        debug_log('Cleaning up:', end=' ')
+        logging.info('Cleaning up:', end=' ')
         while self._do_playlist_cleanup(playlist_id):
-            debug_log('.', end='')
-        debug_log('!')
+            logging.info('.', end='')
+        logging.info('!')
 
     def _do_playlist_cleanup(self, playlist_id: str):
         playlist_tracks = self._spy_client.playlist_tracks(playlist_id=playlist_id, fields='items(track(id))')
@@ -95,9 +136,6 @@ class SwaRunner:
 
     def get_weekly_albums_ids(self):
         playlist = self.get_discover_weekly()
-        if not playlist:
-            print("Could not find 'Discover weekly' playlist!")
-            return []
         tracks = self._spy_client.playlist_tracks(playlist_id=playlist['id'], fields='items(track(id,album(id)))')
         return [t['track']['album']['id'] for t in tracks['items']]
 
@@ -122,6 +160,18 @@ class SwaRunner:
         from spotipy.util import prompt_for_user_token
         return prompt_for_user_token(username, scope)
 
+    @staticmethod
+    def _sort_playlists_by_author(playlists: dict) -> dict:
+        sorted_playlists = {}
+        for playlist in playlists:
+            author_name = playlist['owner']['display_name']
+
+            if author_name not in sorted_playlists:
+                sorted_playlists[author_name] = []
+
+            sorted_playlists[author_name].append(playlist)
+
+        return sorted_playlists
 
 # def main(user: str):
 #     token = SwaRunner.get_oauth_token(user)

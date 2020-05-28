@@ -1,4 +1,5 @@
-from pprint import pprint
+import logging
+import re
 
 from swa.spotifyoauthredis import *
 from swa.utils import *
@@ -32,7 +33,7 @@ def do_login():
     session_id = session_get_id(auto_start=True)
     email = str(bottle.request.forms.get('email'))
     session_data = session_get_data(session_id).add('email', email)
-    debug_log(session_data)
+    logging.debug(session_data)
     session_set_data(session_data)
 
     bottle.redirect(spotify_oauth(email).get_authorize_url())
@@ -63,7 +64,7 @@ def oauth_callback():
 @bottle.get('/login/success')
 @bottle.jinja2_view('login-success.html.j2')
 def login_success():
-    session_data = session_get_data()
+    (session_data, token) = session_get_oauth_token()
     return {
         'username': session_data.email
     }
@@ -77,21 +78,75 @@ def login_error():
 
 @bottle.get('/run')
 def run():
-    from spotipy import Spotify
-
+    (session_data, token) = session_get_oauth_token()
     try:
-        session_data = session_get_data()
-    except RuntimeError:
-        return bottle.redirect('/login?message=no-session')
+        SwaRunner(Spotify(auth=token), session_data.playlist_id).run()
+        bottle.redirect('/run/finished')
+    except DiscoverWeeklyError:
+        bottle.redirect('/run/manual-selection')
 
-    # Try to get the token from cache.
-    token = access_token(email=session_data.email)
-    if not token:
-        bottle.redirect('/login?message=no-auth')
 
-    spotify_client = Spotify(auth=token)
-    SwaRunner(spotify_client).run()
-    bottle.redirect('/run/finished')
+@bottle.get('/run/manual-selection')
+@bottle.jinja2_view('run-manual-selection.html.j2')
+def run_manual_selection():
+    (session_data, token) = session_get_oauth_token()
+    swa = SwaRunner(Spotify(auth=token))
+    user = swa.get_user()
+    try:
+        playlists = {'Spotify': swa.get_discover_weekly(allow_multiple=True)}
+    except DiscoverWeeklyError:
+        playlists = swa.get_user_playlists(sort_by_author=True)
+
+    return {
+        'user':      user,
+        'playlists': playlists,
+    }
+
+
+@bottle.post('/run/manual-selection')
+# @bottle.jinja2_view('run-manual-selection.html.j2')
+def do_run_manual_selection():
+    (session_data, token) = session_get_oauth_token()
+
+    playlist_id = str(bottle.request.forms.get('playlist_id'))
+    if playlist_id == '_':
+        playlist_address = str(bottle.request.forms.get('playlist_id_text'))
+        playlist_id = extract_playlist_id(playlist_address)
+
+    session_set_data(session_data.add('playlist_id', playlist_id))
+    return bottle.redirect('/run')
+
+
+def extract_playlist_id(addr: str) -> str or None:
+    """
+    Given a Spotify URI or ORL will return a playlist ID, if matched.
+    Accepted formats:
+      - https://open.spotify.com/playlist/37i9dQZF1DWWGFQLoP9qlv?si=4WX0XtWXTu-7EJ7eGaMPJg
+      - spotify:playlist:3a4B7fTavHoTR6bvMfXKMk
+
+    :param addr:
+    :return:
+    """
+    if addr.startswith('http'):
+        return extract_playlist_id_from_url(addr)
+    elif addr.startswith('spotify'):
+        return extract_playlist_id_from_uri(addr)
+    else:
+        bottle.redirect('/run/manual-selection?error')
+
+
+def extract_playlist_id_from_url(url: str) -> str or None:
+    # https://open.spotify.com/playlist/37i9dQZF1DWWGFQLoP9qlv?si=4WX0XtWXTu-7EJ7eGaMPJg
+    id_regex = re.compile(r"^https?://open\.spotify\.com/playlist/(\w+)\??")
+    match = id_regex.match(url)
+    return match.groups()[0] if match else None
+
+
+def extract_playlist_id_from_uri(uri: str) -> str or None:
+    # spotify:playlist:3a4B7fTavHoTR6bvMfXKMk
+    id_regex = re.compile(r"^spotify:playlist:(\w+)$")
+    match = id_regex.match(uri)
+    return match.groups()[0] if match else None
 
 
 @bottle.get('/run/finished')
@@ -123,11 +178,10 @@ def static_assets(filename: str):
 
 def main():
     server_host, server_port = http_server_info()
-    enable_debug = is_debug_mode()
-    is_prod_mode = is_prod()
+    enable_debug = bool(getenv('DEBUG', False))
     bottle.run(
         host=server_host, port=server_port,
-        debug=enable_debug, reloader=(not is_prod_mode)
+        debug=enable_debug, reloader=(not is_prod())
     )
 
 

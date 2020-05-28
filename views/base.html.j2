@@ -10,44 +10,24 @@
   <title>{{ head_title | default('Your Weekly Discovery Albums') }}</title>
 
   <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css" integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
-  <!-- Custom styles for this template -->
-  <style>
-    html, body {
-      height: 100%;
-    }
-    body {
-      display: flex;
-      flex-flow: column nowrap;
-      align-items: center;
-      justify-content: center;
-
-      padding-bottom: 40px 0;
-      background-color: #f5f5f5;
-    }
-    section#main {
-      width: 100%;
-      max-width: 480px;
-      padding: 15px;
-      margin: 0 auto;
-/*
-      display: flex;
-      flex-flow: row nowrap;
-      align-items: center;
-      justify-content: center;
-*/
-    }
-
-  </style>
+  <link rel="stylesheet" href="/assets/css/styles.css">
 </head>
 <body class="text-center">
 {% block body %}
 <section id="main">
-    <img class="mb-4" src="/assets/bootstrap-solid.svg" alt="" width="72" height="72">
-    {% block main %}{% endblock main %}
+  <img class="mb-4" src="/assets/bootstrap-solid.svg" alt="" width="72" height="72">
+  {% block main %}
+    <div><strong>Forgot something here?</strong></div>
+  {% endblock main %}
 </section>
 <footer>
   <p class="mt-5 mb-3 text-muted">&copy; 2020</p>
 </footer>
 {% endblock body %}
+<div class="d-none">
+  {% block footer_scripts %}
+    <script src="/assets/js/global.js"></script>
+  {% endblock %}
+</div>
 </body>
 </html>

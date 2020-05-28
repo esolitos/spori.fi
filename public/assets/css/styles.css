@@ -1,0 +1,46 @@
+body {
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: center;
+    justify-content: center;
+
+    padding: 40px 0;
+    background-color: #f5f5f5;
+}
+
+/* A11y: Show the 'focus' ring only when user is 'TAB-ing' */
+body:not(.a11y--focus-on) *:focus {
+    outline: none;
+}
+
+section#main {
+    width: 100%;
+    max-width: 520px;
+    padding: 15px;
+    margin: 0 auto;
+}
+
+details {
+    margin: 1em;
+}
+details > summary {
+  margin: .75em 0;
+}
+
+details[open] .hidden-on-open {
+    visibility: hidden;
+}
+
+details[open] .invisible-on-open {
+    visibility: hidden;
+}
+
+details[open] > section {
+  margin: .25em 0 .75em;
+  background-color: var(--white);
+  padding: .5em 1em;
+}
+
+.list-group {
+    margin-bottom: .75rem;
+}

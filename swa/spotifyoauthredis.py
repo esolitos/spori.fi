@@ -1,15 +1,15 @@
 import json
+import logging
 from os import getenv
 
-import redis
 import spotipy
 
-from swa.utils import debug_log, http_server_info, redis_client
+from swa.utils import http_server_info, redis_client
 
 oauth_grants = "playlist-read-private playlist-modify-public playlist-modify-private"
 
 
-class UserDataStorage():
+class UserDataStorage:
     """
     Redis based data storage.
     """
@@ -74,8 +74,7 @@ class SpotifyOauthRedis(spotipy.SpotifyOAuth):
         # if scopes don't match, then bail
         if (not token_info
                 or "scope" not in token_info
-                or not self._is_scope_subset(self.scope, token_info["scope"])
-        ):
+                or not self._is_scope_subset(self.scope, token_info["scope"])):
             return None
 
         if self.is_token_expired(token_info):
@@ -87,14 +86,17 @@ class SpotifyOauthRedis(spotipy.SpotifyOAuth):
         self._redis_store_user_token(token_info)
 
 
-def spotify_oauth(username: str) -> SpotifyOauthRedis:
+def spotify_oauth(email: str) -> SpotifyOauthRedis:
+    if not email:
+        raise RuntimeError('Email parameter is mandatory.')
+
     client_id = getenv("SPOTIPY_CLIENT_ID")
     client_secret = getenv("SPOTIPY_CLIENT_SECRET")
     hostname = str(getenv('REDIRECT_HOST', "%s:%s" % http_server_info()))
     redirect_url = 'http://%s/oauth/callback' % hostname
 
     return SpotifyOauthRedis(
-        username=username,
+        username=email,
         client_id=client_id,
         client_secret=client_secret,
         redirect_uri=redirect_url,
@@ -104,9 +106,9 @@ def spotify_oauth(username: str) -> SpotifyOauthRedis:
 
 def access_token(email: str) -> str or None:
     tokens = spotify_oauth(email).get_cached_token()
-    debug_log('Cached tokens:')
-    debug_log(tokens)
+    logging.debug('Cached tokens:')
+    logging.debug(tokens)
     if (not tokens) or ('access_token' not in tokens):
         return None
 
-    return tokens['access_token']
+    return str(tokens['access_token'])
