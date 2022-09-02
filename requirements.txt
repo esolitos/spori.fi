@@ -8,4 +8,4 @@ redis==3.5.2
 requests==2.23.0
 six==1.15.0
 -e git+https://github.com/plamere/spotipy.git@5c981a1d62ba6bacd27cb708e75af2fcf1c288e7#egg=spotipy
-urllib3==1.25.9
+urllib3==1.26.5
