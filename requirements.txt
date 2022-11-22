@@ -1,6 +1,6 @@
 bottle==0.12.20
 certifi==2022.9.24
-chardet==3.0.4
+chardet==5.0.0
 idna==2.9
 Jinja2==2.11.3
 MarkupSafe==1.1.1
