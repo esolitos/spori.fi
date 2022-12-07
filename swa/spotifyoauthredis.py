@@ -3,6 +3,7 @@ import logging
 from os import getenv
 
 import spotipy
+import redis
 
 from swa.utils import http_server_info, redis_client
 
@@ -87,7 +88,7 @@ class SpotifyOauthRedis(spotipy.SpotifyOAuth):
         self._redis_store_user_token(token_info)
 
 
-def spotify_oauth(email: str) -> SpotifyOauthRedis:
+def spotify_oauth(email: str) -> spotipy.SpotifyOAuth:
     if not email:
         raise RuntimeError('Email parameter is mandatory.')
 
@@ -96,12 +97,19 @@ def spotify_oauth(email: str) -> SpotifyOauthRedis:
     hostname = str(getenv('REDIRECT_HOST', "%s:%s" % http_server_info()))
     redirect_url = 'http://%s/oauth/callback' % hostname
 
-    return SpotifyOauthRedis(
+    redis_client = redis.Redis().from_url(url=getenv('REDISCLOUD_URL'),decode_responses=True)
+    cache_handler = spotipy.cache_handler.RedisCacheHandler(
+        redis_client,
+        '-'.join(('swa-user', email)),
+    )
+
+    return spotipy.SpotifyOAuth(
         username=email,
         client_id=client_id,
         client_secret=client_secret,
         redirect_uri=redirect_url,
         scope=oauth_grants,
+        cache_handler=cache_handler
     )
 
 
