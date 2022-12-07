@@ -55,6 +55,7 @@ class SpotifyOauthRedis(spotipy.SpotifyOAuth):
                  show_dialog=False, requests_session=True, requests_timeout=None):
         super(SpotifyOauthRedis, self).__init__(client_id, client_secret, redirect_uri, state, scope, None, username,
                                                 proxies, show_dialog, requests_session, requests_timeout)
+        self.username = username
         self._redis = UserDataStorage()
 
     def _redis_get_user_token(self) -> dict or None:
