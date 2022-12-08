@@ -114,10 +114,7 @@ class SwaRunner:
         Attempts to find the "Discover weekly" playlist.
         """
         if self._discover_weekly_id:
-            p = self._spy_client.playlist(self._discover_weekly_id)
-            print('Got pre-selection: {self._discover_weekly_id}')
-            print(p)
-            return p
+            return self._spy_client.playlist(self._discover_weekly_id)
 
         playlist_name: str = 'Discover Weekly'
         if playlist_name not in self._cache or self._cache[playlist_name] is None:
@@ -125,7 +122,8 @@ class SwaRunner:
 
         if len(self._cache[playlist_name]) <= 0:
             raise DiscoverWeeklyNotFoundError()
-        elif len(self._cache[playlist_name]) > 1 and not allow_multiple:
+
+        if len(self._cache[playlist_name]) > 1 and not allow_multiple:
             raise DiscoverWeeklyMultipleMatchesError()
 
         return self._cache[playlist_name] if allow_multiple else self._cache[playlist_name][0]
@@ -178,7 +176,10 @@ class SwaRunner:
         Gets all the album IDs for the songs contained in the Discover Weekly playlist
         """
         playlist = self.get_discover_weekly()
-        tracks = self._spy_client.playlist_tracks(playlist_id=playlist['id'], fields='items(track(id,album(id)))')
+        tracks = self._spy_client.playlist_tracks(
+            playlist_id=playlist['id'],
+            fields='items(track(id,album(id)))',
+        )
         return [t['track']['album']['id'] for t in tracks['items']]
 
     def get_all_albums_tracks(self, album_ids: list):

@@ -1,7 +1,7 @@
 """
 A module to manage user sessions.
 
-This module provides classes and functions to manage user sessions, storing the session data in Redis.
+This module provides classes and functions to manage user sessions, storing the data in Redis.
 """
 
 from __future__ import annotations
