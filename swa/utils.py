@@ -1,3 +1,6 @@
+"""
+Module containing utility functions used by the main application.
+"""
 from os import getenv
 import redis
 
@@ -7,12 +10,12 @@ def redis_client() -> redis.Redis:
     """
     Returns a Redis client instance.
     """
-    c = redis.Redis().from_url(
+    rclient = redis.Redis().from_url(
         url=getenv('REDIS_URL'),
         decode_responses=True,
     )
-    c.ping()
-    return c
+    rclient.ping()
+    return rclient
 
 def redis_session_data_key(sid: str) -> str:
     """
@@ -21,7 +24,7 @@ def redis_session_data_key(sid: str) -> str:
     :param sid: The session ID.
     :return: The Redis key for the session data.
     """
-    return 'swa-session-data-{}'.format(sid)
+    return f'swa-session-data-{sid}'
 
 def http_server_info() -> tuple:
     """
@@ -31,6 +34,6 @@ def http_server_info() -> tuple:
 
 def is_prod() -> bool:
     """
-    Returns True if the application is running in production mode, or False if it is running in development mode.
+    Returns True if the application is running in production, or False for any other environment.
     """
     return getenv('APP_ENV', 'Dev') == 'Prod'
