@@ -30,7 +30,7 @@ def spotify_oauth(email: str) -> spotipy.SpotifyOAuth:
 
     client_id = getenv("SPOTIPY_CLIENT_ID")
     client_secret = getenv("SPOTIPY_CLIENT_SECRET")
-    hostname = str(getenv('REDIRECT_HOST', "%s:%s" % http_server_info()))
+    hostname = str(getenv('REDIRECT_HOST', ":".join(http_server_info())))
     redirect_url = f'http://{hostname}/oauth/callback'
 
     rclient = redis.Redis().from_url(url=getenv('REDIS_URL'),decode_responses=True)
