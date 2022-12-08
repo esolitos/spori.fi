@@ -1,5 +1,7 @@
 import logging
+import os
 import re
+import sys
 
 from swa.spotifyoauthredis import *
 from swa.utils import *
@@ -176,9 +178,23 @@ def static_assets(filename: str):
     )
 
 
+def check_requirements():
+    required_vars = [
+        "SPOTIPY_CLIENT_ID",
+        "SPOTIPY_CLIENT_SECRET",
+        "SPOTIPY_REDIRECT_URI",
+        "REDIS_URL",
+    ]
+    for var in required_vars:
+        if var not in os.environ:
+            print(f"Error: {var} environment variable is not defined", file=sys.stderr)
+            exit(1)
+
+
 def main():
     server_host, server_port = http_server_info()
     enable_debug = bool(getenv('DEBUG', False))
+    check_requirements()
     bottle.run(
         host=server_host, port=server_port,
         debug=enable_debug, reloader=(not is_prod())
