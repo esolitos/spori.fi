@@ -1,8 +1,10 @@
+# pylint: disable=E1101
 """
 This module defines the routes for the web application.
 
 It contains functions for rendering the pages for the index, login, login success and error,
-as well as for handling the redirect from Spotify after authorization, copying tracks from Discover Weekly to the user's playlist,
+as well as for handling the redirect from Spotify after authorization, copying tracks from
+Discover Weekly to the user's playlist,
 and displaying the page for manual selection of the playlist to copy tracks from.
 """
 import logging
@@ -54,7 +56,7 @@ def do_login():
 
 @bottle.route('/oauth/callback', method=('GET', 'POST'))
 def oauth_callback():
-    """Handles the redirect from Spotify after authorization and stores the access token in cache."""
+    """Handles the redirect from Spotify after authorization and stores the tokens in cache."""
     error = bottle.request.params.get('error')
     if error is not None:
         return bottle.redirect(f'/login/error?error={error}')
