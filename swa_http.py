@@ -75,10 +75,9 @@ def oauth_callback():
         as_dict=False,
         check_cache=False
     )
-    if token:
-        bottle.redirect('/login/success')
-    else:
-        bottle.redirect('/login/error')
+
+    path = 'success' if token else 'error'
+    return bottle.redirect(f"/login/{path}")
 
 
 @bottle.get('/login/success')
