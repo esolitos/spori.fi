@@ -60,7 +60,11 @@ def oauth_callback():
         return bottle.redirect('/login?message=no-email')
 
     code = bottle.request.params.get('code')
-    token = spotify_oauth(session_data.email).get_access_token(code, as_dict=False, check_cache=False)
+    token = spotify_oauth(session_data.email).get_access_token(
+        code,
+        as_dict=False,
+        check_cache=False
+    )
     if token:
         bottle.redirect('/login/success')
     else:
@@ -71,7 +75,7 @@ def oauth_callback():
 @bottle.jinja2_view('login-success.html.j2')
 def login_success():
     """Renders the page after successful login and retrieves the access token from cache."""
-    (session_data, token) = session_get_oauth_token()
+    (session_data,) = session_get_oauth_token()
     return {
         'username': session_data.email
     }
@@ -99,7 +103,7 @@ def run():
 @bottle.jinja2_view('run-manual-selection.html.j2')
 def run_manual_selection():
     """Renders the page for manual selection of the playlist to copy tracks from."""
-    (session_data, token) = session_get_oauth_token()
+    (_, token) = session_get_oauth_token()
     swa = SwaRunner(Spotify(auth=token))
     user = swa.get_user()
     try:
@@ -116,8 +120,10 @@ def run_manual_selection():
 @bottle.post('/run/manual-selection')
 # @bottle.jinja2_view('run-manual-selection.html.j2')
 def do_run_manual_selection():
-    """Handles the selection of the playlist to copy tracks from and runs the main program."""
-    (session_data, token) = session_get_oauth_token()
+    """
+    Handles the selection of the playlist to copy tracks from and runs the main program.
+    """
+    (session_data, _) = session_get_oauth_token()
 
     playlist_id = str(bottle.request.forms.get('playlist_id'))
     if playlist_id == '_':
@@ -130,7 +136,7 @@ def do_run_manual_selection():
 
 def extract_playlist_id(addr: str) -> str or None:
     """
-    Given a Spotify URI or URL, this function will return the corresponding playlist ID if it is matched.
+    Given a Spotify URI or URL, this function returns the corresponding playlist ID if matched.
 
     :param addr: A Spotify URI or URL. Accepted formats:
         - "https://open.spotify.com/playlist/<playlist_id>"
@@ -139,10 +145,11 @@ def extract_playlist_id(addr: str) -> str or None:
     """
     if addr.startswith('http'):
         return extract_playlist_id_from_url(addr)
-    elif addr.startswith('spotify'):
+
+    if addr.startswith('spotify'):
         return extract_playlist_id_from_uri(addr)
-    else:
-        bottle.redirect('/run/manual-selection?error')
+
+    bottle.redirect('/run/manual-selection?error')
 
 
 def extract_playlist_id_from_url(url: str) -> str or None:
@@ -181,6 +188,9 @@ def extract_playlist_id_from_uri(uri: str) -> str or None:
 @bottle.get('/run/finished')
 @bottle.jinja2_view('finished.html.j2')
 def run_finished():
+    """
+    Handles the page to show when the process is complete.
+    """
     session_data = session_get_data()
     return {
         'username': session_data.email
@@ -189,6 +199,9 @@ def run_finished():
 
 @bottle.get('/page/<name>')
 def static_pages(name: str):
+    """
+    Serves static pages simply stored as html files.
+    """
     return bottle.static_file(
         filename=name + '.html',
         root='public/pages',
@@ -199,6 +212,9 @@ def static_pages(name: str):
 
 @bottle.get('/assets/<filename:path>')
 def static_assets(filename: str):
+    """
+    Serves static assets stored public files.
+    """
     return bottle.static_file(
         filename=filename,
         root='public/assets',
@@ -206,6 +222,9 @@ def static_assets(filename: str):
 
 
 def check_requirements():
+    """
+    Checks if all requirements are met or quits.
+    """
     required_vars = [
         "SPOTIPY_CLIENT_ID",
         "SPOTIPY_CLIENT_SECRET",
@@ -215,12 +234,15 @@ def check_requirements():
     for var in required_vars:
         if var not in os.environ:
             print(f"Error: {var} environment variable is not defined", file=sys.stderr)
-            exit(1)
+            sys.exit(1)
 
 
 def main():
+    """
+    Main function
+    """
     server_host, server_port = http_server_info()
-    enable_debug = bool(getenv('DEBUG', False))
+    enable_debug = bool(getenv('DEBUG'))
     check_requirements()
     bottle.run(
         host=server_host, port=server_port,
