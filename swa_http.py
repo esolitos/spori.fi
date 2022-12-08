@@ -1,13 +1,21 @@
+"""
+This module defines the routes for the web application.
+
+It contains functions for rendering the pages for the index, login, login success and error,
+as well as for handling the redirect from Spotify after authorization, copying tracks from Discover Weekly to the user's playlist,
+and displaying the page for manual selection of the playlist to copy tracks from.
+"""
 import logging
 import os
 import re
 import sys
 
-from swa.spotifyoauthredis import *
-from swa.utils import *
-from swa.session import *
-from swa.spotify_weekly import *
+import bottle
 
+import swa.session as sws
+import swa.spotifyoauthredis as swoauth
+import swa.spotify_weekly as sw
+import swa.utils as swutil
 
 @bottle.get('/')
 @bottle.jinja2_view('index.html.j2')
@@ -20,10 +28,10 @@ def index():
 @bottle.jinja2_view('login.html.j2')
 def login():
     """Renders the login page and checks for cached access tokens."""
-    session_data = session_get_data(session_get_id(auto_start=True))
+    session_data = sws.session_get_data(sws.session_get_id(auto_start=True))
 
     # Try to get the token from cache.
-    if session_data.email and access_token(email=session_data.email):
+    if session_data.email and swoauth.access_token(email=session_data.email):
         bottle.redirect('/login/success')
 
     return {
@@ -35,13 +43,13 @@ def login():
 @bottle.post('/login')
 def do_login():
     """Handles user login and redirects to Spotify authorization page."""
-    session_id = session_get_id(auto_start=True)
+    session_id = sws.session_get_id(auto_start=True)
     email = str(bottle.request.forms.get('email'))
-    session_data = session_get_data(session_id).add('email', email)
+    session_data = sws.session_get_data(session_id).add('email', email)
     logging.debug(session_data)
-    session_set_data(session_data)
+    sws.session_set_data(session_data)
 
-    bottle.redirect(spotify_oauth(email).get_authorize_url())
+    bottle.redirect(swoauth.spotify_oauth(email).get_authorize_url())
 
 
 @bottle.route('/oauth/callback', method=('GET', 'POST'))
@@ -49,18 +57,18 @@ def oauth_callback():
     """Handles the redirect from Spotify after authorization and stores the access token in cache."""
     error = bottle.request.params.get('error')
     if error is not None:
-        return bottle.redirect('/login/error?error=%s'.format(error))
+        return bottle.redirect(f'/login/error?error={error}')
 
-    session_id = session_get_id(auto_start=False)
+    session_id = sws.session_get_id(auto_start=False)
     if not session_id:
         return bottle.redirect('/login?message=no-session')
 
-    session_data = session_get_data(session_id)
+    session_data = sws.session_get_data(session_id)
     if not session_data.email:
         return bottle.redirect('/login?message=no-email')
 
     code = bottle.request.params.get('code')
-    token = spotify_oauth(session_data.email).get_access_token(
+    token = swoauth.spotify_oauth(session_data.email).get_access_token(
         code,
         as_dict=False,
         check_cache=False
@@ -75,7 +83,7 @@ def oauth_callback():
 @bottle.jinja2_view('login-success.html.j2')
 def login_success():
     """Renders the page after successful login and retrieves the access token from cache."""
-    (session_data,) = session_get_oauth_token()
+    (session_data,) = sws.session_get_oauth_token()
     return {
         'username': session_data.email
     }
@@ -91,11 +99,11 @@ def login_error():
 @bottle.get('/run')
 def run():
     """Runs the main program to copy tracks from Discover Weekly to the user's playlist."""
-    (session_data, token) = session_get_oauth_token()
+    (session_data, token) = sws.session_get_oauth_token()
     try:
-        SwaRunner(Spotify(auth=token), session_data.playlist_id).run()
+        sw.SwaRunner(sw.Spotify(auth=token), session_data.playlist_id).run()
         bottle.redirect('/run/finished')
-    except DiscoverWeeklyError:
+    except sw.DiscoverWeeklyError:
         bottle.redirect('/run/manual-selection')
 
 
@@ -103,12 +111,12 @@ def run():
 @bottle.jinja2_view('run-manual-selection.html.j2')
 def run_manual_selection():
     """Renders the page for manual selection of the playlist to copy tracks from."""
-    (_, token) = session_get_oauth_token()
-    swa = SwaRunner(Spotify(auth=token))
+    (_, token) = sws.session_get_oauth_token()
+    swa = sw.SwaRunner(sw.Spotify(auth=token))
     user = swa.get_user()
     try:
         playlists = {'Spotify': swa.get_discover_weekly(allow_multiple=True)}
-    except DiscoverWeeklyError:
+    except sw.DiscoverWeeklyError:
         playlists = swa.get_user_playlists(sort_by_author=True)
 
     return {
@@ -123,14 +131,14 @@ def do_run_manual_selection():
     """
     Handles the selection of the playlist to copy tracks from and runs the main program.
     """
-    (session_data, _) = session_get_oauth_token()
+    (session_data, _) = sws.session_get_oauth_token()
 
     playlist_id = str(bottle.request.forms.get('playlist_id'))
     if playlist_id == '_':
         playlist_address = str(bottle.request.forms.get('playlist_id_text'))
         playlist_id = extract_playlist_id(playlist_address)
 
-    session_set_data(session_data.add('playlist_id', playlist_id))
+    sws.session_set_data(session_data.add('playlist_id', playlist_id))
     return bottle.redirect('/run')
 
 
@@ -191,7 +199,7 @@ def run_finished():
     """
     Handles the page to show when the process is complete.
     """
-    session_data = session_get_data()
+    session_data = sws.session_get_data()
     return {
         'username': session_data.email
     }
@@ -241,12 +249,12 @@ def main():
     """
     Main function
     """
-    server_host, server_port = http_server_info()
-    enable_debug = bool(getenv('DEBUG'))
+    server_host, server_port = swutil.http_server_info()
+    enable_debug = bool(os.getenv('DEBUG'))
     check_requirements()
     bottle.run(
         host=server_host, port=server_port,
-        debug=enable_debug, reloader=(not is_prod())
+        debug=enable_debug, reloader=(not swutil.is_prod())
     )
 
 
