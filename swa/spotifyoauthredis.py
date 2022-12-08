@@ -54,11 +54,32 @@ class UserDataStorage:
 class SpotifyOauthRedis(spotipy.SpotifyOAuth):
     """Extends SpotifyOAuth using Redis as backend storage"""
 
-    def __init__(self, username: str,
-                 client_id=None, client_secret=None, redirect_uri=None, state=None, scope=None, proxies=None,
-                 show_dialog=False, requests_session=True, requests_timeout=None):
-        super(SpotifyOauthRedis, self).__init__(client_id, client_secret, redirect_uri, state, scope, None, username,
-                                                proxies, show_dialog, requests_session, requests_timeout)
+    def __init__(
+        self,
+        username: str,
+        client_id=None,
+        client_secret=None,
+        redirect_uri=None,
+        state=None,
+        scope=None,
+        proxies=None,
+        show_dialog=False,
+        requests_session=True,
+        requests_timeout=None,
+        ):
+        super().__init__(
+            client_id,
+            client_secret,
+            redirect_uri,
+            state,
+            scope,
+            None,
+            username,
+            proxies,
+            show_dialog,
+            requests_session,
+            requests_timeout
+        )
         self.username = username
         self._redis = UserDataStorage()
 
@@ -92,17 +113,29 @@ class SpotifyOauthRedis(spotipy.SpotifyOAuth):
 
 
 def spotify_oauth(email: str) -> spotipy.SpotifyOAuth:
+    """
+    Get a SpotifyOAuth object using the provided email.
+
+    Args:
+        email (str): The email address of the user.
+
+    Returns:
+        spotipy.SpotifyOAuth: A SpotifyOAuth object.
+
+    Raises:
+        RuntimeError: If the email parameter is not provided.
+    """
     if not email:
         raise RuntimeError('Email parameter is mandatory.')
 
     client_id = getenv("SPOTIPY_CLIENT_ID")
     client_secret = getenv("SPOTIPY_CLIENT_SECRET")
     hostname = str(getenv('REDIRECT_HOST', "%s:%s" % http_server_info()))
-    redirect_url = 'http://%s/oauth/callback' % hostname
+    redirect_url = f'http://{hostname}/oauth/callback'
 
-    redis_client = redis.Redis().from_url(url=getenv('REDIS_URL'),decode_responses=True)
+    rclient = redis.Redis().from_url(url=getenv('REDIS_URL'),decode_responses=True)
     cache_handler = spotipy.cache_handler.RedisCacheHandler(
-        redis_client,
+        rclient,
         '-'.join(('swa-user', email)),
     )
 
@@ -117,6 +150,15 @@ def spotify_oauth(email: str) -> spotipy.SpotifyOAuth:
 
 
 def access_token(email: str) -> str or None:
+    """
+    Get the cached access token for the provided email.
+
+    Args:
+        email (str): The email address of the user.
+
+    Returns:
+        str or None: The access token if found, otherwise None.
+    """
     tokens = spotify_oauth(email).get_cached_token()
     logging.debug('Cached tokens:')
     logging.debug(tokens)
