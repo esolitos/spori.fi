@@ -158,7 +158,7 @@ def extract_playlist_id(addr: str) -> str or None:
     if addr.startswith('spotify'):
         return extract_playlist_id_from_uri(addr)
 
-    bottle.redirect('/run/manual-selection?error')
+    return bottle.redirect('/run/manual-selection?error')
 
 
 def extract_playlist_id_from_url(url: str) -> str or None:
