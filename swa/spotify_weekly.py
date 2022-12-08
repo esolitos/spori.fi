@@ -1,3 +1,11 @@
+"""
+A module to run a script that fetches tracks from the user's "Discover Weekly" playlist,
+and adds them to a new playlist with only albums.
+
+This module provides a `SwaRunner` class and various helpers to perform this task.
+It also provides several custom error classes for handling common errors.
+"""
+
 import logging
 
 from typing import Dict, List, Optional

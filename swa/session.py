@@ -1,3 +1,9 @@
+"""
+A module to manage user sessions.
+
+This module provides classes and functions to manage user sessions, storing the session data in Redis.
+"""
+
 from __future__ import annotations
 import json
 import logging
@@ -84,12 +90,12 @@ def session_start() -> str:
     return session_id
 
 
-def session_get_id(auto_start: bool = True) -> Union[str, None]:
+def session_get_id(auto_start: bool = True) -> str | None:
     """
     Returns the session ID for the current session.
 
-    :param auto_start: If True (the default), a new session will be started if no session is currently active.
-    :return: The session ID for the current session, or None if no session is active and `auto_start` is False.
+    :param auto_start: If True (the default), a new session will be started if necesary.
+    :return: The session ID or None if no session is active and `auto_start` is False.
     """
     session_id = bottle.request.get_cookie('SID')
     if session_id is None:
@@ -148,7 +154,7 @@ def session_set_data(data: SessionData, session_id: str = None) -> bool:
 
     return True
 
-def session_get_oauth_token() -> Tuple[SessionData, str]:
+def session_get_oauth_token() -> tuple(SessionData, str):
     """
     Returns the SessionData instance and OAuth token for the current session.
 
