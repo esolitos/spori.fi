@@ -1,7 +1,7 @@
 from os import getenv
 import redis
 
-cookie_secret = str(getenv("SPOTIPY_CLIENT_SECRET"))
+COOKIE_SECRET = str(getenv("SPOTIPY_CLIENT_SECRET", "default"))
 
 def redis_client() -> redis.Redis:
     """
