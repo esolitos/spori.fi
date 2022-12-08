@@ -1,42 +1,48 @@
 import logging
 
+from typing import Dict, List, Optional
+from spotipy.util import prompt_for_user_token
 from spotipy import Spotify
-
 
 class SwaError(RuntimeError):
     """Generic App error."""
-    pass
-
 
 class PlaylistError(SwaError):
     """Playlist generic error."""
-    pass
-
 
 class DiscoverWeeklyError(PlaylistError):
     """Generic error about 'Discover Weekly' playlist."""
-    pass
-
 
 class DiscoverWeeklyNotFoundError(DiscoverWeeklyError):
     """Playlist 'Discover Weekly' not found."""
-    pass
-
 
 class DiscoverWeeklyMultipleMatchesError(DiscoverWeeklyError):
     """Playlist 'Discover Weekly' has multiple matches."""
-    pass
-
 
 class SwaRunner:
-    _special_playlist: dict = {
+    """A class to run a script that fetches tracks from the user's "Discover Weekly" playlist,
+    and adds them to a new playlist with only albums.
+
+    Args:
+        client (Spotify): The Spotify API client object.
+        discover_weekly_id (str, optional): The ID of the "Discover Weekly" playlist.
+            If not provided, the script will try to find it automatically.
+
+    Attributes:
+        _special_playlist (Dict[str, str]): The name description of the playlist to create.
+        _cache (Dict[str, object]): A dictionary to store cached data from the API.
+        _user (Dict): The user data.
+        _spy_client (Spotify): The Spotify API client object.
+        _discover_weekly_id (str): The ID of the "Discover Weekly" playlist.
+    """
+    _special_playlist: Dict[str, str] = {
         'name': 'Discover Weekly Albums',
         'desc': 'Contains the "Discovery Weekly", but with albums',
     }
 
-    def __init__(self, client: Spotify, discover_weekly_id: str = None):
-        self._cache: dict = {}
-        self._user: dict or None = None
+    def __init__(self, client: Spotify, discover_weekly_id: Optional[str] = None):
+        self._cache: Dict[str, object] = {}
+        self._user: Optional[Dict] = None
         self._spy_client: Spotify = client
         self._discover_weekly_id = discover_weekly_id if discover_weekly_id else None
 
@@ -46,17 +52,22 @@ class SwaRunner:
         tracks = self.get_all_albums_tracks(album_ids)
         self.add_tracks_to_playlist(album_playlist['id'], tracks)
 
-    def get_user(self):
+    def get_user(self) -> Dict:
         if self._user is None:
             self._user = self._spy_client.current_user()
             logging.debug('Fetched user data:')
             logging.debug(self._user)
         return self._user
 
-    def get_username(self):
+    def get_username(self) -> str:
+        """Get the current user's username
+
+        Returns:
+            str: The username
+        """
         return self.get_user()['id']
 
-    def get_user_playlists(self, sort_by_author: bool = False) -> dict:
+    def get_user_playlists(self, sort_by_author: bool = False) -> List[Dict]:
         key: str = 'user_playlists'
         if key not in self._cache or self._cache[key] is None:
             self._cache[key] = self._spy_client.current_user_playlists()['items']
@@ -66,23 +77,23 @@ class SwaRunner:
 
         return self._cache[key]
 
-    def get_playlist_by_name(self, name: str, multiple: bool = False) -> list:
+    def get_playlist_by_name(self, name: str, multiple: bool = False) -> List[Dict]:
         matches = []
         for playlist in self.get_user_playlists():
             if playlist['name'] == name:
-                logging.debug("Playlist '{}': Found.".format(name))
+                logging.debug("Playlist '%s': Found.", name)
                 matches.append(playlist)
 
-        if len(matches):
+        if matches:
             return matches if multiple else matches[0]
 
-        logging.debug("Playlist '{}': Not found.".format(name))
+        logging.debug("Playlist '%s': Not found.", name)
         return matches
 
     def get_discover_weekly(self, allow_multiple: bool = False) -> list or dict:
         if self._discover_weekly_id:
             p = self._spy_client.playlist(self._discover_weekly_id)
-            print('Got pre-selection: {}'.format(self._discover_weekly_id))
+            print('Got pre-selection: {self._discover_weekly_id}')
             print(p)
             return p
 
@@ -100,7 +111,7 @@ class SwaRunner:
     def prepare_weekly_album_playlist(self) -> dict:
         album_playlist = self.get_playlist_by_name(self._special_playlist['name'])
         if not album_playlist:
-            logging.debug("Creating playlist: '{}'".format(self._special_playlist['name']))
+            logging.debug("Creating playlist: '%s'", self._special_playlist['name'])
             return self._spy_client.user_playlist_create(
                 self.get_username(),
                 name=self._special_playlist['name'],
@@ -108,9 +119,9 @@ class SwaRunner:
                 public=False
             )
 
-        logging.info("Found playlist '%s:'".format(self._special_playlist['name']))
+        logging.info("Found playlist '%s:'", self._special_playlist['name'])
         if album_playlist['tracks']['total'] > 0:
-            logging.info("Contains %s tracks to remove.".format(album_playlist['tracks']['total']))
+            logging.info("Contains %s tracks to remove.", album_playlist['tracks']['total'])
             self._playlist_cleanup(album_playlist['id'])
 
         return album_playlist
@@ -148,7 +159,11 @@ class SwaRunner:
 
     def add_tracks_to_playlist(self, playlist_id: str, tracks: list):
         for chunk in list(SwaRunner.divide_chunks(tracks, 100)):
-            self._spy_client.user_playlist_add_tracks(user=self.get_username(), playlist_id=playlist_id, tracks=chunk)
+            self._spy_client.user_playlist_add_tracks(
+                user=self.get_username(),
+                playlist_id=playlist_id,
+                tracks=chunk
+            )
 
     @staticmethod
     def divide_chunks(items: list, size: int):
@@ -157,7 +172,6 @@ class SwaRunner:
 
     @staticmethod
     def get_oauth_token(username: str, scope: str = 'user-read-email playlist-read-private playlist-modify-private'):
-        from spotipy.util import prompt_for_user_token
         return prompt_for_user_token(username, scope)
 
     @staticmethod
