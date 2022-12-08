@@ -12,12 +12,14 @@ from swa.spotify_weekly import *
 @bottle.get('/')
 @bottle.jinja2_view('index.html.j2')
 def index():
+    """Renders the index page."""
     return {}
 
 
 @bottle.get('/login')
 @bottle.jinja2_view('login.html.j2')
 def login():
+    """Renders the login page and checks for cached access tokens."""
     session_data = session_get_data(session_get_id(auto_start=True))
 
     # Try to get the token from cache.
@@ -32,6 +34,7 @@ def login():
 
 @bottle.post('/login')
 def do_login():
+    """Handles user login and redirects to Spotify authorization page."""
     session_id = session_get_id(auto_start=True)
     email = str(bottle.request.forms.get('email'))
     session_data = session_get_data(session_id).add('email', email)
@@ -43,6 +46,7 @@ def do_login():
 
 @bottle.route('/oauth/callback', method=('GET', 'POST'))
 def oauth_callback():
+    """Handles the redirect from Spotify after authorization and stores the access token in cache."""
     error = bottle.request.params.get('error')
     if error is not None:
         return bottle.redirect('/login/error?error=%s'.format(error))
@@ -66,6 +70,7 @@ def oauth_callback():
 @bottle.get('/login/success')
 @bottle.jinja2_view('login-success.html.j2')
 def login_success():
+    """Renders the page after successful login and retrieves the access token from cache."""
     (session_data, token) = session_get_oauth_token()
     return {
         'username': session_data.email
@@ -75,11 +80,13 @@ def login_success():
 @bottle.get('/login/error')
 @bottle.jinja2_view('login-error.html.j2')
 def login_error():
+    """Renders the page if there is an error during login."""
     return {}
 
 
 @bottle.get('/run')
 def run():
+    """Runs the main program to copy tracks from Discover Weekly to the user's playlist."""
     (session_data, token) = session_get_oauth_token()
     try:
         SwaRunner(Spotify(auth=token), session_data.playlist_id).run()
@@ -91,6 +98,7 @@ def run():
 @bottle.get('/run/manual-selection')
 @bottle.jinja2_view('run-manual-selection.html.j2')
 def run_manual_selection():
+    """Renders the page for manual selection of the playlist to copy tracks from."""
     (session_data, token) = session_get_oauth_token()
     swa = SwaRunner(Spotify(auth=token))
     user = swa.get_user()
@@ -108,6 +116,7 @@ def run_manual_selection():
 @bottle.post('/run/manual-selection')
 # @bottle.jinja2_view('run-manual-selection.html.j2')
 def do_run_manual_selection():
+    """Handles the selection of the playlist to copy tracks from and runs the main program."""
     (session_data, token) = session_get_oauth_token()
 
     playlist_id = str(bottle.request.forms.get('playlist_id'))
@@ -121,13 +130,12 @@ def do_run_manual_selection():
 
 def extract_playlist_id(addr: str) -> str or None:
     """
-    Given a Spotify URI or ORL will return a playlist ID, if matched.
-    Accepted formats:
-      - https://open.spotify.com/playlist/37i9dQZF1DWWGFQLoP9qlv?si=4WX0XtWXTu-7EJ7eGaMPJg
-      - spotify:playlist:3a4B7fTavHoTR6bvMfXKMk
+    Given a Spotify URI or URL, this function will return the corresponding playlist ID if it is matched.
 
-    :param addr:
-    :return:
+    :param addr: A Spotify URI or URL. Accepted formats:
+        - "https://open.spotify.com/playlist/<playlist_id>"
+        - "spotify:playlist:<playlist_id>"
+    :return: The playlist ID if matched, or None if no match was found.
     """
     if addr.startswith('http'):
         return extract_playlist_id_from_url(addr)
@@ -138,14 +146,33 @@ def extract_playlist_id(addr: str) -> str or None:
 
 
 def extract_playlist_id_from_url(url: str) -> str or None:
-    # https://open.spotify.com/playlist/37i9dQZF1DWWGFQLoP9qlv?si=4WX0XtWXTu-7EJ7eGaMPJg
+    """
+    Extracts the playlist ID from a Spotify URL.
+
+    Args:
+        url (str): The Spotify URL to extract the playlist ID from.
+            The URL must have the format "https://open.spotify.com/playlist/<playlist_id>".
+            The URL may optionally contain additional query parameters after the playlist ID.
+
+    Returns:
+        str or None: The playlist ID if it is found in the URL, otherwise None.
+    """
     id_regex = re.compile(r"^https?://open\.spotify\.com/playlist/(\w+)\??")
     match = id_regex.match(url)
     return match.groups()[0] if match else None
 
 
 def extract_playlist_id_from_uri(uri: str) -> str or None:
-    # spotify:playlist:3a4B7fTavHoTR6bvMfXKMk
+    """
+    Extracts the playlist ID from a Spotify URI.
+
+    Args:
+        uri (str): The Spotify URI to extract the playlist ID from.
+            The URI must have the format "spotify:playlist:<playlist_id>".
+
+    Returns:
+        str or None: The playlist ID if it is found in the URI, otherwise None.
+    """
     id_regex = re.compile(r"^spotify:playlist:(\w+)$")
     match = id_regex.match(uri)
     return match.groups()[0] if match else None
