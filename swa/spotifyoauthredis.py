@@ -15,7 +15,10 @@ class UserDataStorage:
     Redis based data storage.
     """
     _key_prefix = 'swa-user'
-    _client = redis_client()
+    _client = None
+
+    def __init__(self) -> None:
+        self._client = redis_client()
 
     @classmethod
     def _redis_key(cls, name: str) -> str:
@@ -97,7 +100,7 @@ def spotify_oauth(email: str) -> spotipy.SpotifyOAuth:
     hostname = str(getenv('REDIRECT_HOST', "%s:%s" % http_server_info()))
     redirect_url = 'http://%s/oauth/callback' % hostname
 
-    redis_client = redis.Redis().from_url(url=getenv('REDISCLOUD_URL'),decode_responses=True)
+    redis_client = redis.Redis().from_url(url=getenv('REDIS_URL'),decode_responses=True)
     cache_handler = spotipy.cache_handler.RedisCacheHandler(
         redis_client,
         '-'.join(('swa-user', email)),
