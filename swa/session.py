@@ -1,20 +1,30 @@
-from __future__ import annotations
+"""
+A module to manage user sessions.
 
+This module provides classes and functions to manage user sessions, storing the data in Redis.
+"""
+
+from __future__ import annotations
 import json
 import logging
 import random
 import string
 
-import bottle
+from os import getenv
 
+import bottle
 from swa.spotifyoauthredis import access_token
 from swa.utils import redis_client, redis_session_data_key
 
-cookie_secret = 'TODO'
+COOKIE_SECRET = str(getenv("SPOTIPY_CLIENT_SECRET", "default"))
 
 
 class SessionData:
-    """Immutable class to store user data"""
+    """
+    Immutable class to store user data.
+
+    :param data: The session data as a dictionary. If not provided, an empty dictionary is used.
+    """
 
     def __init__(self, data=None):
         if data is None:
@@ -28,28 +38,51 @@ class SessionData:
         return None
 
     def add(self, key: str, value):
+        """Adds data to the session
+
+        Args:
+            key (str): Data identifier
+            value (any): The data
+
+        Returns:
+            self: Self
+        """
         _d = self._data
         _d[key] = value
         return self.__class__(data=_d)
 
     def all(self) -> dict:
+        """
+        Returns all the session data as a dictionary.
+        """
         return self._data
 
     @classmethod
     def from_json(cls, json_str: str) -> SessionData:
+        """
+        Returns a new `SessionData` instance from the given JSON string.
+
+        :param json_str: The JSON string to convert to `SessionData`.
+        :return: The new `SessionData` instance.
+        """
         data = json.loads(json_str)
         return cls(data=data)
 
     def to_json(self) -> str:
+        """
+        Converts the `SessionData` instance to a JSON string.
+        """
         return json.dumps(self._data)
 
 
 def session_start() -> str:
     """
-    Starts a session, setting the data in Redis
+    Starts a session, setting the data in Redis.
+
+    :return: The session ID for the new session.
     """
     session_id = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
-    bottle.response.set_cookie('SID', session_id, secret=cookie_secret, path='/', httponly=True)
+    bottle.response.set_cookie('SID', session_id, secret=COOKIE_SECRET, path='/', httponly=True)
     redis_key = redis_session_data_key(session_id)
     redis_data = SessionData({'id': session_id}).to_json()
     redis_client().set(name=redis_key, value=redis_data)
@@ -57,8 +90,13 @@ def session_start() -> str:
     return session_id
 
 
-def session_get_id(auto_start: bool = True) -> str or None:
-    """Will return a session identifier, auto-starting a session when required."""
+def session_get_id(auto_start: bool = True) -> str | None:
+    """
+    Returns the session ID for the current session.
+
+    :param auto_start: If True (the default), a new session will be started if necesary.
+    :return: The session ID or None if no session is active and `auto_start` is False.
+    """
     session_id = bottle.request.get_cookie('SID')
     if session_id is None:
         return session_start() if auto_start else None
@@ -67,6 +105,15 @@ def session_get_id(auto_start: bool = True) -> str or None:
 
 
 def session_get_data(session_id=None) -> SessionData:
+    """
+    Returns the SessionData instance for the current session or the given session ID.
+
+    :param session_id: The session ID to get the data for.
+        If not provided, the current session ID will be used.
+
+    :return: The `SessionData` instance for the current or given session.
+    :raises RuntimeError: If no session is active and no `session_id` is provided.
+    """
     if not session_id:
         session_id = session_get_id(auto_start=False)
 
@@ -81,8 +128,17 @@ def session_get_data(session_id=None) -> SessionData:
 
     return SessionData()
 
-
 def session_set_data(data: SessionData, session_id: str = None) -> bool:
+    """
+    Sets the session data for the current or given session.
+
+    :param data: The `SessionData` instance to set for the session.
+    :param session_id: The session ID to set the data for.
+        If not provided, the current session ID will be used.
+
+    :return: True if the data was successfully set, or False otherwise.
+    :raises RuntimeError: If no session is active and no `session_id` is provided.
+    """
     if not session_id:
         session_id = session_get_id(False)
 
@@ -98,8 +154,13 @@ def session_set_data(data: SessionData, session_id: str = None) -> bool:
 
     return True
 
+def session_get_oauth_token() -> tuple(SessionData, str):
+    """
+    Returns the SessionData instance and OAuth token for the current session.
 
-def session_get_oauth_token() -> (SessionData, str):
+    :return: A tuple containing the `SessionData` instance and OAuth token for the session.
+    :raises HTTPError: If no session is active or OAuth token is unavailable for the session.
+    """
     try:
         session_data = session_get_data()
         # Try to get the token from cache.
