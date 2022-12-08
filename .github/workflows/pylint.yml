@@ -1,6 +1,7 @@
 name: Pylint
 
-on: [push]
+on:
+  push:
 
 jobs:
   build:
