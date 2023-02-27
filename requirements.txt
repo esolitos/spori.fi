@@ -7,7 +7,7 @@
 
 -i https://pypi.org/simple/
 async-timeout==4.0.2; python_full_version >= '3.6.0'
-bottle==0.12.23
+bottle==0.12.24
 certifi==2022.12.7; python_full_version >= '3.6.0'
 charset-normalizer==2.1.1; python_full_version >= '3.6.0'
 idna==3.4; python_version >= '3.5'
