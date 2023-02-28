@@ -84,7 +84,7 @@ def oauth_callback():
 @bottle.jinja2_view('login-success.html.j2')
 def login_success():
     """Renders the page after successful login and retrieves the access token from cache."""
-    (session_data,) = sws.session_get_oauth_token()
+    (session_data,_) = sws.session_get_oauth_token()
     return {
         'username': session_data.email
     }
