@@ -33,11 +33,13 @@ def spotify_oauth(email: str) -> spotipy.SpotifyOAuth:
     hostname = str(getenv('REDIRECT_HOST', ":".join(http_server_info())))
     redirect_url = f'http://{hostname}/oauth/callback'
 
-    rclient = redis.Redis().from_url(url=getenv('REDIS_URL'),decode_responses=True)
-    cache_handler = spotipy.cache_handler.RedisCacheHandler(
-        rclient,
-        '-'.join(('swa-user', email)),
-    )
+    cache_handler = None
+    if getenv('REDIS_URL') != None:
+        rclient = redis.Redis().from_url(url=getenv('REDIS_URL'),decode_responses=True)
+        cache_handler = spotipy.cache_handler.RedisCacheHandler(
+            rclient,
+            '-'.join(('swa-user', email)),
+        )
 
     return spotipy.SpotifyOAuth(
         username=email,
