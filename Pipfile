@@ -7,7 +7,7 @@ verify_ssl = true
 autopep8 = "*"
 
 [packages]
-spotipy = "~=2.21"
+spotipy = "~=2.22"
 bottle = "~=0.12"
 jinja2 = "~=3.1"
 redis = "~=4.4"
