@@ -238,7 +238,6 @@ def check_requirements():
         "SPOTIPY_CLIENT_ID",
         "SPOTIPY_CLIENT_SECRET",
         "SPOTIPY_REDIRECT_URI",
-        "REDIS_URL",
     ]
     for var in required_vars:
         if var not in os.environ:
