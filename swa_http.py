@@ -19,6 +19,7 @@ import swa.spotifyoauthredis as swoauth
 import swa.spotify_weekly as sw
 import swa.utils as swutil
 
+
 @bottle.get('/')
 @bottle.jinja2_view('index.html.j2')
 def index():
@@ -84,7 +85,7 @@ def oauth_callback():
 @bottle.jinja2_view('login-success.html.j2')
 def login_success():
     """Renders the page after successful login and retrieves the access token from cache."""
-    (session_data,_) = sws.session_get_oauth_token()
+    (session_data, _) = sws.session_get_oauth_token()
     return {
         'username': session_data.email
     }
@@ -241,7 +242,8 @@ def check_requirements():
     ]
     for var in required_vars:
         if var not in os.environ:
-            print(f"Error: {var} environment variable is not defined", file=sys.stderr)
+            print(
+                f"Error: {var} environment variable is not defined", file=sys.stderr)
             sys.exit(1)
 
 

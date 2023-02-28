@@ -12,6 +12,7 @@ from swa.utils import http_server_info
 
 OAUTH_GRANTS = "playlist-read-private playlist-modify-public playlist-modify-private"
 
+
 def spotify_oauth(email: str) -> spotipy.SpotifyOAuth:
     """
     Get a SpotifyOAuth object using the provided email.
@@ -34,8 +35,8 @@ def spotify_oauth(email: str) -> spotipy.SpotifyOAuth:
     redirect_url = f'http://{hostname}/oauth/callback'
 
     cache_handler = None
-    if getenv('REDIS_URL') != None:
-        rclient = redis.Redis().from_url(url=getenv('REDIS_URL'),decode_responses=True)
+    if getenv('REDIS_URL') is not None:
+        rclient = redis.Redis().from_url(url=getenv('REDIS_URL'), decode_responses=True)
         cache_handler = spotipy.cache_handler.RedisCacheHandler(
             rclient,
             '-'.join(('swa-user', email)),
