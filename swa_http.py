@@ -47,6 +47,7 @@ def login():
 def do_login():
     """Handles user login and redirects to Spotify authorization page."""
     session_id = sws.session_get_id(auto_start=True)
+    logging.debug(session_id)
     email = str(bottle.request.forms.get('email'))
     session_data = sws.session_get_data(session_id).add('email', email)
     logging.debug(session_data)
@@ -238,7 +239,6 @@ def check_requirements():
     required_vars = [
         "SPOTIPY_CLIENT_ID",
         "SPOTIPY_CLIENT_SECRET",
-        "SPOTIPY_REDIRECT_URI",
     ]
     for var in required_vars:
         if var not in os.environ:
@@ -254,6 +254,8 @@ def main():
     server_host, server_port = swutil.http_server_info()
     enable_debug = bool(os.getenv('DEBUG'))
     check_requirements()
+    if enable_debug:
+        logging.basicConfig(level=logging.DEBUG)
     bottle.run(
         host=server_host, port=server_port,
         debug=enable_debug, reloader=(not swutil.is_prod())

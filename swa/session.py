@@ -1,7 +1,9 @@
+
 """
 A module to manage user sessions.
 
-This module provides classes and functions to manage user sessions, storing the data in Redis.
+This module provides classes and functions to manage user sessions. It now supports storing the data in Redis,
+and falls back to file-based storage when REDIS_URL is not provided.
 """
 
 from __future__ import annotations
@@ -9,14 +11,29 @@ import json
 import logging
 import random
 import string
-
-from os import getenv
+import os
+from typing import Optional
 
 import bottle
 from swa.spotifyoauthredis import access_token
 from swa.utils import redis_client, redis_session_data_key
 
-COOKIE_SECRET = str(getenv("SPOTIPY_CLIENT_SECRET", "default"))
+COOKIE_SECRET = str(os.getenv("SPOTIPY_CLIENT_SECRET", "default"))
+
+# File-based storage directory
+FILE_STORAGE_PATH = './session_data'
+
+
+def is_redis_enabled() -> bool:
+    """
+    Check if Redis is enabled by looking for REDIS_URL.
+    Returns True if REDIS_URL is set, False otherwise.
+    """
+    return 'REDIS_URL' in os.environ
+
+
+def get_file_storage_path(session_id: str) -> str:
+    return os.path.join(FILE_STORAGE_PATH, f'{session_id}.json')
 
 
 class SessionData:
@@ -76,16 +93,15 @@ class SessionData:
 
 
 def session_start() -> str:
-    """
-    Starts a session, setting the data in Redis.
+    session_id = ''.join(random.choices(
+        string.ascii_letters + string.digits, k=16))
+    bottle.response.set_cookie('SID', session_id, secret=COOKIE_SECRET)
 
-    :return: The session ID for the new session.
-    """
-    session_id = ''.join(random.choices(string.ascii_letters + string.digits, k=16))
-    bottle.response.set_cookie('SID', session_id, secret=COOKIE_SECRET, path='/', httponly=True)
-    redis_key = redis_session_data_key(session_id)
-    redis_data = SessionData({'id': session_id}).to_json()
-    redis_client().set(name=redis_key, value=redis_data)
+    # Initialize empty session data
+    if not is_redis_enabled():
+        os.makedirs(FILE_STORAGE_PATH, exist_ok=True)
+        with open(get_file_storage_path(session_id), 'w') as file:
+            json.dump({}, file)
 
     return session_id
 
@@ -97,62 +113,51 @@ def session_get_id(auto_start: bool = True) -> str | None:
     :param auto_start: If True (the default), a new session will be started if necesary.
     :return: The session ID or None if no session is active and `auto_start` is False.
     """
-    session_id = bottle.request.get_cookie('SID')
+    session_id = bottle.request.get_cookie('SID', secret=COOKIE_SECRET)
     if session_id is None:
         return session_start() if auto_start else None
 
     return str(session_id)
 
 
-def session_get_data(session_id=None) -> SessionData:
-    """
-    Returns the SessionData instance for the current session or the given session ID.
-
-    :param session_id: The session ID to get the data for.
-        If not provided, the current session ID will be used.
-
-    :return: The `SessionData` instance for the current or given session.
-    :raises RuntimeError: If no session is active and no `session_id` is provided.
-    """
+def session_get_data(session_id: str = None) -> SessionData:
     if not session_id:
         session_id = session_get_id(auto_start=False)
 
     if not session_id:
         raise RuntimeError('No valid session and no session_id provided!')
 
-    redis_data = redis_client().get(redis_session_data_key(session_id))
-    logging.debug("Session data: ", end=" ")
-    logging.debug({session_id: redis_data})
-    if redis_data:
-        return SessionData.from_json(redis_data)
+    if is_redis_enabled():
+        redis_data = redis_client().get(redis_session_data_key(session_id))
+        if redis_data:
+            return SessionData.from_json(redis_data)
+    else:
+        try:
+            with open(get_file_storage_path(session_id), 'r') as file:
+                return SessionData(json.load(file))
+        except FileNotFoundError:
+            return SessionData()
 
     return SessionData()
 
+
 def session_set_data(data: SessionData, session_id: str = None) -> bool:
-    """
-    Sets the session data for the current or given session.
-
-    :param data: The `SessionData` instance to set for the session.
-    :param session_id: The session ID to set the data for.
-        If not provided, the current session ID will be used.
-
-    :return: True if the data was successfully set, or False otherwise.
-    :raises RuntimeError: If no session is active and no `session_id` is provided.
-    """
     if not session_id:
         session_id = session_get_id(False)
 
     if not session_id:
         raise RuntimeError('No valid session and no session_id provided!')
 
-    redis_key = redis_session_data_key(session_id)
-    redis_data = data.to_json()
-    logging.debug("Set session data: ", end=" ")
-    logging.debug({session_id: redis_data})
-    if not redis_client().set(name=redis_key, value=redis_data):
-        return False
+    if is_redis_enabled():
+        redis_key = redis_session_data_key(session_id)
+        redis_data = data.to_json()
+        return redis_client().set(name=redis_key, value=redis_data)
+    else:
+        os.makedirs(FILE_STORAGE_PATH, exist_ok=True)
+        with open(get_file_storage_path(session_id), 'w') as file:
+            json.dump(data.all(), file)
+        return True
 
-    return True
 
 def session_get_oauth_token() -> tuple(SessionData, str):
     """
