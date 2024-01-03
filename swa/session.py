@@ -2,18 +2,16 @@
 """
 A module to manage user sessions.
 
-This module provides classes and functions to manage user sessions. It now supports storing the data in Redis,
-and falls back to file-based storage when REDIS_URL is not provided.
+This module provides classes and functions to manage user sessions.
+It now supports storing the data in Redis, and falls back to file-based storage
+when REDIS_URL is not provided.
 """
 
 from __future__ import annotations
 import json
-import logging
 import random
 import string
 import os
-from typing import Optional
-
 import bottle
 from swa.spotifyoauthredis import access_token
 from swa.utils import redis_client, redis_session_data_key
@@ -27,12 +25,20 @@ FILE_STORAGE_PATH = '.cache'
 def is_redis_enabled() -> bool:
     """
     Check if Redis is enabled by looking for REDIS_URL.
-    Returns True if REDIS_URL is set, False otherwise.
+
+    :return: True if REDIS_URL is set, False otherwise.
     """
     return 'REDIS_URL' in os.environ
 
 
 def get_file_storage_path(session_id: str) -> str:
+    """
+    Returns the file path for the given session ID.
+
+    :param session_id: The session ID.
+
+    :return: The file path for the given session ID.
+    """
     return os.path.join(FILE_STORAGE_PATH, f'{session_id}.json')
 
 
@@ -93,6 +99,11 @@ class SessionData:
 
 
 def session_start() -> str:
+    """
+    Starts a new session.
+
+    :return: The session ID.
+    """
     session_id = ''.join(random.choices(
         string.ascii_letters + string.digits, k=16))
     bottle.response.set_cookie('SID', session_id, secret=COOKIE_SECRET)
@@ -100,7 +111,11 @@ def session_start() -> str:
     # Initialize empty session data
     if not is_redis_enabled():
         os.makedirs(FILE_STORAGE_PATH, exist_ok=True)
-        with open(get_file_storage_path(session_id), 'w') as file:
+        with open(
+            get_file_storage_path(session_id),
+            mode='w',
+            encoding='utf-8',
+        ) as file:
             json.dump({}, file)
 
     return session_id
@@ -121,6 +136,15 @@ def session_get_id(auto_start: bool = True) -> str | None:
 
 
 def session_get_data(session_id: str = None) -> SessionData:
+    """
+    Returns the session data for the given session ID.
+
+    :param session_id: The session ID. If not provided, the current session ID will be used.
+
+    :return: The session data.
+
+    :raises RuntimeError: If no session ID is provided and no session is active.
+    """
     if not session_id:
         session_id = session_get_id(auto_start=False)
 
@@ -133,7 +157,11 @@ def session_get_data(session_id: str = None) -> SessionData:
             return SessionData.from_json(redis_data)
     else:
         try:
-            with open(get_file_storage_path(session_id), 'r') as file:
+            with open(
+                get_file_storage_path(session_id),
+                mode='r',
+                encoding='utf-8',
+            ) as file:
                 return SessionData(json.load(file))
         except FileNotFoundError:
             return SessionData()
@@ -142,6 +170,16 @@ def session_get_data(session_id: str = None) -> SessionData:
 
 
 def session_set_data(data: SessionData, session_id: str = None) -> bool:
+    """
+    Sets the session data for the given session ID.
+
+    :param data: The session data to store.
+    :param session_id: The session ID. If not provided, the current session ID will be used.
+
+    :return: True if the data was stored successfully, False otherwise.
+
+    :raises RuntimeError: If no session ID is provided and no session is active.
+    """
     if not session_id:
         session_id = session_get_id(False)
 
@@ -152,11 +190,15 @@ def session_set_data(data: SessionData, session_id: str = None) -> bool:
         redis_key = redis_session_data_key(session_id)
         redis_data = data.to_json()
         return redis_client().set(name=redis_key, value=redis_data)
-    else:
-        os.makedirs(FILE_STORAGE_PATH, exist_ok=True)
-        with open(get_file_storage_path(session_id), 'w') as file:
-            json.dump(data.all(), file)
-        return True
+
+    os.makedirs(FILE_STORAGE_PATH, exist_ok=True)
+    with open(
+        get_file_storage_path(session_id),
+        mode='w',
+        encoding='utf-8',
+    ) as file:
+        json.dump(data.all(), file)
+    return True
 
 
 def session_get_oauth_token() -> tuple(SessionData, str):
