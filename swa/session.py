@@ -21,7 +21,7 @@ from swa.utils import redis_client, redis_session_data_key
 COOKIE_SECRET = str(os.getenv("SPOTIPY_CLIENT_SECRET", "default"))
 
 # File-based storage directory
-FILE_STORAGE_PATH = './session_data'
+FILE_STORAGE_PATH = '.cache'
 
 
 def is_redis_enabled() -> bool:

@@ -36,14 +36,19 @@ def spotify_oauth(email: str) -> spotipy.SpotifyOAuth:
 
     cache_handler = None
     if getenv('REDIS_URL'):
+        from spotipy.cache_handler import RedisCacheHandler
         rclient = redis.Redis().from_url(url=getenv('REDIS_URL'), decode_responses=True)
-        cache_handler = spotipy.cache_handler.RedisCacheHandler(
+        cache_handler = RedisCacheHandler(
             rclient,
             '-'.join(('swa-user', email)),
         )
+    else:
+        from hashlib import sha1
+        from spotipy.oauth2 import CacheFileHandler
+        cache_handler = CacheFileHandler(
+            cache_path='.cache/user-%s' % sha1(email.encode(), usedforsecurity=False).hexdigest())
 
     return spotipy.SpotifyOAuth(
-        username=email,
         client_id=client_id,
         client_secret=client_secret,
         redirect_uri=redirect_url,
