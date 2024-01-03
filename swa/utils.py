@@ -6,6 +6,7 @@ import redis
 
 COOKIE_SECRET = str(getenv("SPOTIPY_CLIENT_SECRET", "default"))
 
+
 def redis_client() -> redis.Redis:
     """
     Returns a Redis client instance.
@@ -17,6 +18,7 @@ def redis_client() -> redis.Redis:
     rclient.ping()
     return rclient
 
+
 def redis_session_data_key(sid: str) -> str:
     """
     Returns a Redis key for the session data with the given session ID.
@@ -26,11 +28,13 @@ def redis_session_data_key(sid: str) -> str:
     """
     return f'swa-session-data-{sid}'
 
+
 def http_server_info() -> tuple:
     """
     Returns the IP address and port number that the HTTP server should listen on.
     """
     return getenv("LISTEN_IP", '127.0.1.1'), getenv("PORT", '8080')
+
 
 def is_prod() -> bool:
     """

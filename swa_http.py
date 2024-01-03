@@ -38,7 +38,7 @@ def login():
         bottle.redirect('/login/success')
 
     return {
-        'email':       session_data.email or '',
+        'email': session_data.email or '',
         'message_key': bottle.request.params.get('message') or False,
     }
 
@@ -123,7 +123,7 @@ def run_manual_selection():
         playlists = swa.get_user_playlists(sort_by_author=True)
 
     return {
-        'user':      user,
+        'user': user,
         'playlists': playlists,
     }
 
@@ -243,7 +243,8 @@ def check_requirements():
     for var in required_vars:
         if var not in os.environ:
             print(
-                f"Error: {var} environment variable is not defined", file=sys.stderr)
+                f"Error: {var} environment variable is not defined",
+                file=sys.stderr)
             sys.exit(1)
 
 

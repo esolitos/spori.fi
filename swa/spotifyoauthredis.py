@@ -46,7 +46,10 @@ def spotify_oauth(email: str) -> spotipy.SpotifyOAuth:
         from hashlib import sha1
         from spotipy.oauth2 import CacheFileHandler
         cache_handler = CacheFileHandler(
-            cache_path='.cache/user-%s' % sha1(email.encode(), usedforsecurity=False).hexdigest())
+            cache_path='.cache/user-%s' %
+            sha1(
+                email.encode(),
+                usedforsecurity=False).hexdigest())
 
     return spotipy.SpotifyOAuth(
         client_id=client_id,

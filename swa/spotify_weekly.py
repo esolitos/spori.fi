@@ -53,7 +53,8 @@ class SwaRunner:
         'desc': 'Contains the "Discovery Weekly", but with albums',
     }
 
-    def __init__(self, client: Spotify, discover_weekly_id: Optional[str] = None):
+    def __init__(self, client: Spotify,
+                 discover_weekly_id: Optional[str] = None):
         self._cache: Dict[str, object] = {}
         self._user: Optional[Dict] = None
         self._spy_client: Spotify = client
@@ -100,7 +101,8 @@ class SwaRunner:
 
         return self._cache[key]
 
-    def get_playlist_by_name(self, name: str, multiple: bool = False) -> List[Dict]:
+    def get_playlist_by_name(self, name: str,
+                             multiple: bool = False) -> List[Dict]:
         """
         Gets a user playlist by it's name.
         """
@@ -116,7 +118,8 @@ class SwaRunner:
         logging.debug("Playlist '%s': Not found.", name)
         return matches
 
-    def get_discover_weekly(self, allow_multiple: bool = False) -> list or dict:
+    def get_discover_weekly(
+            self, allow_multiple: bool = False) -> list or dict:
         """
         Attempts to find the "Discover weekly" playlist.
         """
