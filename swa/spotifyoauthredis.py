@@ -43,11 +43,8 @@ def spotify_oauth(email: str) -> spotipy.SpotifyOAuth:
             '-'.join(('swa-user', email)),
         )
     else:
-        cache_handler = spotipy.oauth2.CacheFileHandler(
-            cache_path='.cache/user-%s' %
-            hashlib.sha1(
-                email.encode(),
-                usedforsecurity=False).hexdigest())
+        cache_path = f'.cache/user-{hashlib.sha1(email.encode()).hexdigest()}'
+        cache_handler = spotipy.oauth2.CacheFileHandler(cache_path)
 
     return spotipy.SpotifyOAuth(
         client_id=client_id,
