@@ -2,11 +2,12 @@
 This module contains functions for handling Spotify OAuth and cached access tokens.
 """
 
-import logging
 from os import getenv
 
-import spotipy
+import hashlib
+import logging
 import redis
+import spotipy
 
 from swa.utils import http_server_info
 
@@ -36,18 +37,15 @@ def spotify_oauth(email: str) -> spotipy.SpotifyOAuth:
 
     cache_handler = None
     if getenv('REDIS_URL'):
-        from spotipy.cache_handler import RedisCacheHandler
         rclient = redis.Redis().from_url(url=getenv('REDIS_URL'), decode_responses=True)
-        cache_handler = RedisCacheHandler(
+        cache_handler = spotipy.cache_handler.RedisCacheHandler(
             rclient,
             '-'.join(('swa-user', email)),
         )
     else:
-        from hashlib import sha1
-        from spotipy.oauth2 import CacheFileHandler
-        cache_handler = CacheFileHandler(
+        cache_handler = spotipy.oauth2.CacheFileHandler(
             cache_path='.cache/user-%s' %
-            sha1(
+            hashlib.sha1(
                 email.encode(),
                 usedforsecurity=False).hexdigest())
 
