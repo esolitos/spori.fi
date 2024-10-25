@@ -255,8 +255,12 @@ def main():
     server_host, server_port = swutil.http_server_info()
     enable_debug = bool(os.getenv('DEBUG'))
     check_requirements()
-    if enable_debug:
-        logging.basicConfig(level=logging.DEBUG)
+    log_level = logging.DEBUG if enable_debug else logging.INFO
+    logging.basicConfig(level=log_level)
+
+    if (os.getenv('REDIRECT_HOST') is not None):
+        logging.info("Oauth Host:\n\thttp://%s" % os.getenv('REDIRECT_HOST'))
+
     bottle.run(
         host=server_host, port=server_port,
         debug=enable_debug, reloader=(not swutil.is_prod())
