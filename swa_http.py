@@ -259,7 +259,7 @@ def main():
     logging.basicConfig(level=log_level)
 
     if os.getenv('REDIRECT_HOST') is not None:
-        logging.info(f"Oauth Host:\n\thttp://{os.getenv('REDIRECT_HOST')}")
+        logging.info("Oauth Host:\n\thttp://%s", os.getenv('REDIRECT_HOST'))
 
     bottle.run(
         host=server_host, port=server_port,
