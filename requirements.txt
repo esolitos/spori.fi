@@ -1,5 +1,5 @@
 -i https://pypi.org/simple
-async-timeout==5.0.0; python_full_version <= '3.11.2'
+async-timeout==5.0.1; python_full_version <= '3.11.2'
 bottle==0.13.2
 certifi==2024.8.30; python_version >= '3.6'
 charset-normalizer==3.4.0; python_full_version >= '3.7.0'
