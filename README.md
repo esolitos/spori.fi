@@ -1,5 +1,15 @@
 # Spotify Discovery Weekly Albums
 
+
+> [!WARNING]  
+> Due to recent [changes on Spotify's Web API](https://developer.spotify.com/blog/2024-11-27-changes-to-the-web-api) this application is now useless.
+>
+> Not happy? Feel free to join the [crowd of people yelling at the wall in Spotify's forum](https://community.spotify.com/t5/Spotify-for-Developers/Changes-to-Web-API/td-p/6540414). 
+
+This repo will now be archived, as it serves no purpouse anymore.
+
+---
+
 This simple script offers the ability to create a *"Discover Weekly Albums"*
 playlist containing the albums of the songs from Spotify's *"Discover Weekly"*.
 
